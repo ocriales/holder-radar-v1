@@ -307,28 +307,46 @@ min_holder = st.sidebar.slider(
     "HOLDER SCORE mínimo (0–100)", 0, 100, 60, 1
 )
 
-df_filtered = df[df["holder_score_100"] >= min_holder]
+# Filtramos y ORDENAMOS por score descendente
+df_filtered = df[df["holder_score_100"] >= min_holder].copy()
+df_filtered = df_filtered.sort_values("holder_score_100", ascending=False).reset_index(drop=True)
 
 # ---- Tabla ----
 st.subheader("Tabla con HOLDER SCORE (0–100) — sin stables ni wrapped")
 
+# Métrica rápida: cuántas pasan el filtro
+st.write(
+    f"Monedas con HOLDER SCORE ≥ {min_holder}: **{len(df_filtered)}** de {len(df)} analizadas."
+)
+
+# Estilo para resaltar TOP 3
+def highlight_top3(row):
+    if row.name == 0:
+        # Puesto 1
+        return ['background-color: #14532d; color: white; font-weight: bold'] * len(row)
+    elif row.name in (1, 2):
+        # Puestos 2 y 3
+        return ['background-color: #166534; color: white'] * len(row)
+    else:
+        return [''] * len(row)
+
+cols_table = [
+    "market_cap_rank",
+    "symbol",
+    "name",
+    "current_price",
+    "market_cap",
+    "total_volume",
+    "score_market",
+    "score_tokenomics",
+    "score_momentum_narr",
+    "score_whales_deriv",
+    "score_personal",
+    "holder_score_100",
+]
+
 st.dataframe(
-    df_filtered[
-        [
-            "market_cap_rank",
-            "symbol",
-            "name",
-            "current_price",
-            "market_cap",
-            "total_volume",
-            "score_market",
-            "score_tokenomics",
-            "score_momentum_narr",
-            "score_whales_deriv",
-            "score_personal",
-            "holder_score_100",
-        ]
-    ].sort_values("holder_score_100", ascending=False),
+    df_filtered[cols_table].style.apply(highlight_top3, axis=1),
     use_container_width=True,
 )
 
@@ -336,11 +354,14 @@ st.dataframe(
 st.subheader("Detalle de una cripto")
 
 if not df_filtered.empty:
-    default_symbol = df_filtered.sort_values("holder_score_100", ascending=False)["symbol"].iloc[0]
+    # Como df_filtered ya está ordenado, el primero es el mejor score
+    default_symbol = df_filtered["symbol"].iloc[0]
+    symbol_list = df_filtered["symbol"].tolist()
+
     symbol_sel = st.selectbox(
         "Selecciona símbolo",
-        df_filtered["symbol"].tolist(),
-        index=df_filtered["symbol"].tolist().index(default_symbol),
+        symbol_list,
+        index=symbol_list.index(default_symbol),
     )
 
     row = df_filtered[df_filtered["symbol"] == symbol_sel].iloc[0]
